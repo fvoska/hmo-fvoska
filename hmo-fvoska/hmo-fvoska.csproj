@@ -37,4 +37,12 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <None Include="anotirani_primjer_male_instance.dat.txt" />
+    <None Include="hmo-faq.pdf" />
+    <None Include="hmo_predlozak.doc" />
+    <None Include="instanca.txt" />
+    <None Include="Project_Andreas_Kassler_slides.pdf" />
+    <None Include="upute_za_projekt_iz_hmo_2016.pdf" />
+  </ItemGroup>
 </Project>
