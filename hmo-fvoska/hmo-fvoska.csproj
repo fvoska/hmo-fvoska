@@ -35,14 +35,21 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Instance.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <None Include="anotirani_primjer_male_instance.dat.txt" />
     <None Include="hmo-faq.pdf" />
     <None Include="hmo_predlozak.doc" />
-    <None Include="instanca.txt" />
     <None Include="Project_Andreas_Kassler_slides.pdf" />
     <None Include="upute_za_projekt_iz_hmo_2016.pdf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="anotirani_primjer_male_instance.dat.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="instanca.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
