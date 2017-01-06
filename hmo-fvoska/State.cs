@@ -98,12 +98,6 @@ namespace hmofvoska
 		}
 
 		public bool BNodeActive(int node) {
-			// Node is active if there is at least one server on that node.
-			for (int s = 1; s <= Instance.numServers; s++) {
-				if (BServerActive(s) && Instance.ServerOnNode(s, node)) {
-					return true;
-				}
-			}
 			// Node is also active if there is traffic going through the node.
 			foreach(var usedLink in UsedLinks()) {
 				if (usedLink.Item1 == node || usedLink.Item2 == node) {
