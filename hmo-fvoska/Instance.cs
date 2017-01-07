@@ -23,6 +23,18 @@ namespace hmofvoska
 		}
 	}
 
+	public class SCProperties {
+		public int ID = 0;
+		public double MaxLatency;
+		public List<int> Components = new List<int>();
+
+		public SCProperties(int id, double maxLatency, List<int> components) {
+			ID = id;
+			MaxLatency = maxLatency;
+			Components = components;
+		}
+	}
+
 	public class Instance
 	{
 		private string InstanceFile;
@@ -43,7 +55,21 @@ namespace hmofvoska
 		public double PwrNode(int node) {
 			return p[node - 1];
 		}
-		public double[,] sc { get; private set; }
+		private double[,] sc;
+		public Dictionary<int, SCProperties> ServiceChains() {
+			Dictionary<int, SCProperties> serviceChains = new Dictionary<int, SCProperties>();
+			for (int chain = 0; chain < numServiceChains; chain++) {
+				List<int> chainComponents = new List<int>();
+				for (int component = 0; component < numVms; component++) {
+					if (sc[chain, component] == 1) {
+						chainComponents.Add(component + 1);
+					}
+				}
+				SCProperties scp = new SCProperties(chain + 1, lat[chain], chainComponents);
+				serviceChains.Add(chain + 1, scp);
+			}
+			return serviceChains;
+		}
 		private double[,] req;
 		public double RequiredCPU(int component) {
 			return req[0, component - 1];
@@ -233,6 +259,42 @@ namespace hmofvoska
 			}
 		}
 
+		public List<Tuple<int, double>> OrderServersByEfficency() {
+			List<Tuple<int, double>> list = new List<Tuple<int, double>>();
+			for (int s = 1; s <= numServers; s++) {
+				double efficency = AvailableCPU(s) / PwrSrvMax(s);
+				list.Add(new Tuple<int, double>(s, efficency));
+			}
+			list.Sort((el1, el2) => el2.Item2.CompareTo(el1.Item2));
+			return list;
+		}
+
+		public bool ComponentInChain(int comp) {
+			for (int chain = 0; chain < numServiceChains; chain++) {
+				if (sc[chain, comp - 1] == 1)
+					return true;
+			}
+			return false;
+		}
+
+		public List<int> ComponentsToPlace() {
+			List<int> componentsToPlace = new List<int>();
+			for (int comp = 1; comp <= numVms; comp++) {
+				if (ComponentInChain(comp))
+					componentsToPlace.Add(comp);
+			}
+			return componentsToPlace;
+		}
+
+		public List<int> ComponentsToIgnore() {
+			List<int> componentsToIgnore = new List<int>();
+			for (int comp = 1; comp <= numVms; comp++) {
+				if (!ComponentInChain(comp))
+					componentsToIgnore.Add(comp);
+			}
+			return componentsToIgnore;
+		}
+
 		public override string ToString()
 		{
 			string s = "";
@@ -299,6 +361,17 @@ namespace hmofvoska
 				s += "required throughput between components <" + k.Item1 + ", " + k.Item2 + "> " + VmDemands[k].ToString() + '\n';
 			}
 			s += "maximum latency for each service chain = [" + string.Join(", ", lat) + "]\n";
+			return s;
+		}
+
+		public string PrintServiceChains() {
+			string s = "";
+			var scs = ServiceChains();
+			foreach (var chain in scs) {
+				s += "SC #" + chain.Key + " components: <";
+				s += string.Join(",", chain.Value.Components);
+				s += "> maxLat: " + chain.Value.MaxLatency + "\n";
+			}
 			return s;
 		}
 	}

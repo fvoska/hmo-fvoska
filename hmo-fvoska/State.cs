@@ -21,8 +21,36 @@ namespace hmofvoska
 				return false;
 			if (srv <= 0 || srv > Instance.numServers)
 				return false;
+			if (Instance.RequiredCPU(vms) + ServerUsageCPU(srv) > Instance.AvailableCPU(srv)) {
+				// Putting Vms on this server would overload its CPU.
+				return false;
+			}
+			if (Instance.RequiredRAM(vms) + ServerUsageRAM(srv) > Instance.AvailableRAM(srv)) {
+				// Putting Vms on this server would overload its RAM.
+				return false;
+			}
 			VmsToServerAllocation[vms - 1] = srv;
 			return true;
+		}
+
+		public double ServerUsageCPU(int srv) {
+			double usage = 0;
+			for (int vms = 0; vms < Instance.numVms; vms++) {
+				if (VmsToServerAllocation[vms] == srv) {
+					usage += Instance.RequiredCPU(vms + 1);
+				}
+			}
+			return usage;
+		}
+
+		public double ServerUsageRAM(int srv) {
+			double usage = 0;
+			for (int vms = 0; vms < Instance.numVms; vms++) {
+				if (VmsToServerAllocation[vms] == srv) {
+					usage += Instance.RequiredRAM(vms + 1);
+				}
+			}
+			return usage;
 		}
 
 		public bool SetRoute(int vms1, int vms2, List<int> route) {
