@@ -12,11 +12,12 @@ namespace hmofvoska
 
 		public State(Instance instance)
 		{
-			this.Instance = instance;
+			Instance = instance;
 			VmsToServerAllocation = new int[Instance.numVms];
 		}
 
 		public bool PutVmsOnServer(int vms, int srv) {
+			// Puts specified component on specified server.
 			if (vms <= 0 || vms > Instance.numVms)
 				return false;
 			if (srv <= 0 || srv > Instance.numServers)
@@ -33,7 +34,19 @@ namespace hmofvoska
 			return true;
 		}
 
+		public int ComponentLocationServer(int component) {
+			// Returns server on which the component is placed.
+			return VmsToServerAllocation[component - 1];
+		}
+
+		public int ComponentLocationNode(int component) {
+			// Returns node on which the component is placed.
+			int server = ComponentLocationServer(component);
+			return Instance.ServerOnNode(server);
+		}
+
 		public double ServerUsageCPU(int srv) {
+			// Checks CPU usage of specified server.
 			double usage = 0;
 			for (int vms = 0; vms < Instance.numVms; vms++) {
 				if (VmsToServerAllocation[vms] == srv) {
@@ -44,6 +57,7 @@ namespace hmofvoska
 		}
 
 		public double ServerUsageRAM(int srv) {
+			// Checks RAM usage of specified server.
 			double usage = 0;
 			for (int vms = 0; vms < Instance.numVms; vms++) {
 				if (VmsToServerAllocation[vms] == srv) {
@@ -54,6 +68,7 @@ namespace hmofvoska
 		}
 
 		public bool SetRoute(int vms1, int vms2, List<int> route) {
+			// Sets up route between two components.
 			if (vms1 <= 0 || vms1 > Instance.numVms)
 				return false;
 			if (vms2 <= 0 || vms2 > Instance.numVms)
@@ -64,6 +79,7 @@ namespace hmofvoska
 
 		public override string ToString()
 		{
+			// Prints solution.
 			string s = "";
 			s += PrintX();
 			s += "\n\n";
@@ -72,10 +88,12 @@ namespace hmofvoska
 		}
 
 		public string PrintAllocations() {
+			// Prints components' allocations to servers (vector).
 			return string.Join(",", VmsToServerAllocation);
 		}
 
 		public string PrintX() {
+			// Prints components' allocations to servers (matrix).
 			string s = "x=[\n";
 			for (int i = 0; i < Instance.numVms; i++) {
 				s += "[";
@@ -95,8 +113,9 @@ namespace hmofvoska
 		}
 
 		public string PrintR() {
+			// Prints routes.
 			string s = "routes={\n";
-			List<string> routes = new List<string>();
+			var routes = new List<string>();
 			foreach (var route in Routes) {
 				routes.Add("<" + route.Key.Item1 + "," + route.Key.Item2 + "," + "[" + string.Join(",", route.Value) + "]>");
 			}
@@ -106,10 +125,12 @@ namespace hmofvoska
 		}
 
 		public void SaveToFile(string filename) {
+			// Saves solution to a file.
 			System.IO.File.WriteAllText(filename, this.ToString());
 		}
 
 		public bool BServerActive(int srv) {
+			// Checks if specified server is active.
 			for (int i = 0; i < Instance.numVms; i++) {
 				if (VmsToServerAllocation[i] == srv)
 					return true;
@@ -118,6 +139,7 @@ namespace hmofvoska
 		}
 
 		public int ServerActive(int srv) {
+			// Checks if specified server is active.
 			for (int i = 0; i < Instance.numVms; i++) {
 				if (VmsToServerAllocation[i] == srv)
 					return 1;
@@ -126,7 +148,7 @@ namespace hmofvoska
 		}
 
 		public bool BNodeActive(int node) {
-			// Node is also active if there is traffic going through the node.
+			// Node is active if there is communication with anohter node.
 			foreach(var usedLink in UsedLinks()) {
 				if (usedLink.Item1 == node || usedLink.Item2 == node) {
 					return true;
@@ -136,12 +158,6 @@ namespace hmofvoska
 		}
 
 		public int NodeActive(int node) {
-			/* Node IS NOT active if there is no communication with another node, even if there are active servers on that node.
-			for (int s = 1; s <= Instance.numServers; s++) {
-				if (BServerActive(s) && Instance.ServerOnNode(s, node)) {
-					return 1;
-				}
-			}*/
 			// Node is active if there is communication with anohter node.
 			foreach(var usedLink in UsedLinks()) {
 				if (usedLink.Item1 == node || usedLink.Item2 == node) {
@@ -152,25 +168,29 @@ namespace hmofvoska
 		}
 
 		public bool BComponentOnServer(int component, int server) {
+			// Checks if specified component is on specified server.
 			if (VmsToServerAllocation[component - 1] == server)
 				return true;
 			return false;
 		}
 
 		public int ComponentOnServer(int component, int server) {
+			// Checks if specified component is on specified server.
 			if (VmsToServerAllocation[component - 1] == server)
 				return 1;
 			return 0;
 		}
 
 		public List<Tuple<int, int>> UsedLinks() {
-			List<Tuple<int, int>> usedLinks = new List<Tuple<int, int>>();
+			// Based on routes, checks which links are used.
+			var usedLinks = new List<Tuple<int, int>>();
 			foreach (var route in Routes.Values) {
 				if (route.Count == 1) {
 					// Components are on same node, they do not use links.
 					continue;
 				}
 				for (var i = 0; i < route.Count - 1; i++) {
+					// Check all links along the route and add to used links.
 					usedLinks.Add(new Tuple<int, int>(route[i], route[i+1]));
 				}
 			}
@@ -195,7 +215,7 @@ namespace hmofvoska
 						// Sum all component's requirements for components that are on this server.
 						srvCpuUsage += ComponentOnServer(c, s) * Instance.RequiredCPU(c);
 					}
-					Console.WriteLine("Server {0} active ({1}/{2}={3})", s, srvCpuUsage, Instance.AvailableCPU(s), Instance.PwrSrvMin(s) + powerDiff * (srvCpuUsage / Instance.AvailableCPU(s)));
+					// Console.WriteLine("Server {0} active ({1}/{2}={3})", s, srvCpuUsage, Instance.AvailableCPU(s), Instance.PwrSrvMin(s) + powerDiff * (srvCpuUsage / Instance.AvailableCPU(s)));
 					if (srvCpuUsage > Instance.AvailableCPU(s)) {
 						// Components use more CPU than the server has available.
 						// Invalid solution.

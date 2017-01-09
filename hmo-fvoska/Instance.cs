@@ -3,7 +3,8 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-
+using System.Globalization;
+using System.Linq;
 namespace hmofvoska
 {
 	public class LinkProperties {
@@ -55,17 +56,17 @@ namespace hmofvoska
 		public double PwrNode(int node) {
 			return p[node - 1];
 		}
-		private double[,] sc;
+		private int[,] sc;
 		public Dictionary<int, SCProperties> ServiceChains() {
-			Dictionary<int, SCProperties> serviceChains = new Dictionary<int, SCProperties>();
+			var serviceChains = new Dictionary<int, SCProperties>();
 			for (int chain = 0; chain < numServiceChains; chain++) {
-				List<int> chainComponents = new List<int>();
+				var chainComponents = new List<int>();
 				for (int component = 0; component < numVms; component++) {
 					if (sc[chain, component] == 1) {
 						chainComponents.Add(component + 1);
 					}
 				}
-				SCProperties scp = new SCProperties(chain + 1, lat[chain], chainComponents);
+				var scp = new SCProperties(chain + 1, lat[chain], chainComponents);
 				serviceChains.Add(chain + 1, scp);
 			}
 			return serviceChains;
@@ -84,7 +85,15 @@ namespace hmofvoska
 		public double AvailableRAM(int srv) {
 			return av[1, srv - 1];
 		}
-		private double[,] al;
+		private int[,] al;
+		public int ServerOnNode(int srv) {
+			for (int i = 0; i < numNodes; i++) {
+				if (al[srv - 1, i] == 1) {
+					return i + 1;
+				}
+			}
+			return -1;
+		}
 		public bool ServerOnNode(int srv, int node) {
 			if (al[srv - 1, node - 1] == 1) {
 				return true;
@@ -104,6 +113,10 @@ namespace hmofvoska
 		}
 
 		public void Parse() {
+			var provider = new NumberFormatInfo();
+			provider.NumberDecimalSeparator = ".";
+			provider.NumberGroupSeparator = ",";
+
 			// Read instance file.
 			var text = File.ReadAllText(InstanceFile);
 
@@ -148,14 +161,14 @@ namespace hmofvoska
 			int counter = 0;
 			MatchCollection p_maxMatches = Regex.Matches(neatText, @"P_max\s*=\s*\[(.*)\];");
 			foreach (var value in p_maxMatches[0].Groups[1].Value.Split(',')) {
-				p_max[counter] = Convert.ToDouble(value.Trim());
+				p_max[counter] = Convert.ToDouble(value.Trim(), provider);
 				counter++;
 			}
 
 			counter = 0;
 			MatchCollection p_minMatches = Regex.Matches(neatText, @"P_min\s*=\s*\[(.*)\];");
 			foreach (var value in p_minMatches[0].Groups[1].Value.Split(',')) {
-				p_min[counter] = Convert.ToDouble(value.Trim());
+				p_min[counter] = Convert.ToDouble(value.Trim(), provider);
 				counter++;
 			}
 
@@ -165,12 +178,12 @@ namespace hmofvoska
 			counter = 0;
 			MatchCollection PMatches = Regex.Matches(neatText, @"P\s*=\s*\[(.*)\];");
 			foreach (var value in PMatches[0].Groups[1].Value.Split(',')) {
-				p[counter] = Convert.ToDouble(value.Trim());
+				p[counter] = Convert.ToDouble(value.Trim(), provider);
 				counter++;
 			}
 
 			// Parse which components are part of which service chain.
-			sc = new double[numServiceChains, numVms];
+			sc = new int[numServiceChains, numVms];
 
 			counter = 0;
 			MatchCollection scMatches = Regex.Matches(neatText, @"sc\s*=\s*\[\s*(\[.*\]\s*)*\s*];");
@@ -178,7 +191,7 @@ namespace hmofvoska
 				var serviceChain = scMatches[0].Groups[1].Captures[i].Value.Trim().Replace("[", "").Replace("]", "");
 				var split = serviceChain.Split(',');
 				for (int j = 0; j < split.Length; j++) {
-					sc[i, j] = Convert.ToDouble(split[j]);
+					sc[i, j] = Convert.ToInt32(split[j]);
 				}
 				counter++;
 			}
@@ -191,7 +204,7 @@ namespace hmofvoska
 				var requirements = reqMatches[0].Groups[1].Captures[i].Value.Trim().Replace("[", "").Replace("]", "");
 				var split = requirements.Split(',');
 				for (int j = 0; j < split.Length; j++) {
-					req[i, j] = Convert.ToDouble(split[j]);
+					req[i, j] = Convert.ToDouble(split[j], provider);
 				}
 			}
 
@@ -203,19 +216,19 @@ namespace hmofvoska
 				var availableResources = avMatches[0].Groups[1].Captures[i].Value.Trim().Replace("[", "").Replace("]", "");
 				var split = availableResources.Split(',');
 				for (int j = 0; j < split.Length; j++) {
-					av[i, j] = Convert.ToDouble(split[j]);
+					av[i, j] = Convert.ToDouble(split[j], provider);
 				}
 			}
 
 			// Parse server locations on nodes.
-			al = new double[numServers, numNodes];
+			al = new int[numServers, numNodes];
 
 			MatchCollection alMatches = Regex.Matches(neatText, @"al\s*=\s*\[\s*(\[.*\]\s*)*\s*];");
 			for (int i = 0; i < alMatches[0].Groups[1].Captures.Count; i++) {
 				var locations = alMatches[0].Groups[1].Captures[i].Value.Trim().Replace("[", "").Replace("]", "");
 				var split = locations.Split(',');
 				for (int j = 0; j < split.Length; j++) {
-					al[i, j] = Convert.ToDouble(split[j]);
+					al[i, j] = Convert.ToInt32(split[j]);
 				}
 			}
 				
@@ -226,9 +239,9 @@ namespace hmofvoska
 				var split = links.Split(',');
 				int n1 = Convert.ToInt32(split[0]);
 				int n2 = Convert.ToInt32(split[1]);
-				double c = Convert.ToDouble(split[2]);
-				double p = Convert.ToDouble(split[3]);
-				double l = Convert.ToDouble(split[4]);
+				double c = Convert.ToDouble(split[2], provider);
+				double p = Convert.ToDouble(split[3], provider);
+				double l = Convert.ToDouble(split[4], provider);
 				Links.Add(new Tuple<int, int>(n1, n2), new LinkProperties(c, p, l));
 			}
 
@@ -239,7 +252,7 @@ namespace hmofvoska
 				var split = demands.Split(',');
 				int c1 = Convert.ToInt32(split[0]);
 				int c2 = Convert.ToInt32(split[1]);
-				double throughput = Convert.ToDouble(split[2]);
+				double throughput = Convert.ToDouble(split[2], provider);
 				VmDemands.Add(new Tuple<int, int>(c1, c2), throughput);
 			}
 
@@ -250,7 +263,7 @@ namespace hmofvoska
 			MatchCollection latMatches = Regex.Matches(neatText, @"lat\s*=\s*\[(.*)\];");
 			foreach (var value in latMatches[0].Groups[1].Value.Split(',')) {
 				try {
-					lat[counter] = Convert.ToDouble(value.Trim());
+					lat[counter] = Convert.ToDouble(value.Trim(), provider);
 				}
 				catch (Exception ex) {
 					Console.WriteLine(ex.Message);
@@ -259,17 +272,19 @@ namespace hmofvoska
 			}
 		}
 
-		public List<Tuple<int, double>> OrderServersByEfficency() {
-			List<Tuple<int, double>> list = new List<Tuple<int, double>>();
+		public List<Tuple<int, double>> OrderServersByEfficency(bool order = true) {
+			// Returns list of servers ordered by efficency (Available CPU / Max power usage).
+			var list = new List<Tuple<int, double>>();
 			for (int s = 1; s <= numServers; s++) {
 				double efficency = AvailableCPU(s) / PwrSrvMax(s);
 				list.Add(new Tuple<int, double>(s, efficency));
 			}
-			list.Sort((el1, el2) => el2.Item2.CompareTo(el1.Item2));
+			if (order) list.Sort((el1, el2) => el2.Item2.CompareTo(el1.Item2));
 			return list;
 		}
 
 		public bool ComponentInChain(int comp) {
+			// Checks if component is part of at least one service chain.
 			for (int chain = 0; chain < numServiceChains; chain++) {
 				if (sc[chain, comp - 1] == 1)
 					return true;
@@ -278,7 +293,8 @@ namespace hmofvoska
 		}
 
 		public List<int> ComponentsToPlace() {
-			List<int> componentsToPlace = new List<int>();
+			// Returns all components that are part of at least one service chain.
+			var componentsToPlace = new List<int>();
 			for (int comp = 1; comp <= numVms; comp++) {
 				if (ComponentInChain(comp))
 					componentsToPlace.Add(comp);
@@ -287,7 +303,8 @@ namespace hmofvoska
 		}
 
 		public List<int> ComponentsToIgnore() {
-			List<int> componentsToIgnore = new List<int>();
+			// Returns all components which are not part of any service chain.
+			var componentsToIgnore = new List<int>();
 			for (int comp = 1; comp <= numVms; comp++) {
 				if (!ComponentInChain(comp))
 					componentsToIgnore.Add(comp);
@@ -295,8 +312,40 @@ namespace hmofvoska
 			return componentsToIgnore;
 		}
 
-		public override string ToString()
-		{
+		public IOrderedEnumerable<KeyValuePair<Tuple<int, int>, int>> AllNeededRoutes() {
+			// Returns all pairs of components which need to communicate directly.
+			// Key == components that communicate.
+			// Value == in how many service chains they have to communicate.
+			// Sorted by number of service chains in which the components communicate, descending.
+			var routes = new Dictionary<Tuple<int, int>, int>();
+			foreach (var chain in ServiceChains()) {
+				if (chain.Value.Components.Count == 1) {
+					// Only one item in service chain, no need for communication.
+					continue;
+				}
+				for (var componentIndex = 0; componentIndex < chain.Value.Components.Count - 1; componentIndex++) {
+					var t = new Tuple<int, int>(chain.Value.Components[componentIndex], chain.Value.Components[componentIndex + 1]);
+					if (!routes.ContainsKey(t)) {
+						// First occurrence.
+						routes.Add(t, 1);
+					} else {
+						// Incement number of chains in which components communicate.
+						routes[t] += 1;
+					}
+				}
+			}
+			return from entry in routes orderby entry.Value descending select entry;
+		}
+
+		public string PrintNeededRoutes() {
+			string s = "";
+			foreach (var t in AllNeededRoutes()) {
+				s += "Components " + t.Key.Item1 + " and " + t.Key.Item2 + " need communication (in " + t.Value + " chains)\n";
+			}
+			return s;
+		}
+
+		public override string ToString() {
 			string s = "";
 			s += "numServers = " + numServers + '\n';
 			s += "numVms = " + numVms + '\n';
@@ -314,7 +363,7 @@ namespace hmofvoska
 				s += '\t';
 				for (int j = 0; j < scColLength; j++)
 				{
-					s += sc[i, j];
+					s += sc[i, j] + " ";
 				}
 				s += '\n';
 			}
@@ -326,7 +375,7 @@ namespace hmofvoska
 				s += '\t';
 				for (int j = 0; j < reqColLength; j++)
 				{
-					s += req[i, j];
+					s += req[i, j] + " ";
 				}
 				s += '\n';
 			}
@@ -338,7 +387,7 @@ namespace hmofvoska
 				s += '\t';
 				for (int j = 0; j < avColLength; j++)
 				{
-					s += av[i, j];
+					s += av[i, j] + " ";
 				}
 				s += '\n';
 			}
@@ -350,7 +399,7 @@ namespace hmofvoska
 				s += '\t';
 				for (int j = 0; j < alColLength; j++)
 				{
-					s += al[i, j];
+					s += al[i, j] + " ";
 				}
 				s += '\n';
 			}

@@ -31,7 +31,6 @@ namespace hmofvoska
 					// Loop repeats until we find a server which has enough CPU and RAM for this Vms.
 				} while(!canPutVmsOnServer);
 			}
-			// TODO: Set up route.
 			return State;
 		}
 	}

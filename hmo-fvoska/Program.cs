@@ -9,21 +9,30 @@ namespace hmofvoska
 	{
 		public static void Main (string[] args)
 		{
+			// First argument is path to instance file.
 			string instanceFile = "instanca.txt";
 			if (args.Length > 0) {
 				instanceFile = args[0];
 			}
 
-			Instance instance = new Instance(instanceFile);
+			// Parse instance file.
+			var instance = new Instance(instanceFile);
 			Console.WriteLine(instance);
 
-			InitialVms init = new InitialVms(instance);
+			// Initial component placement on servers.
+			var init = new InitialVms(instance);
+			State solution = init.InitialPlacement();
 
-			State initialSolution = init.InitialPlacement();
+			// Set up intial routes.
+			Router router = new Router(instance, solution);
+			router.Route();
 
-			Console.WriteLine(initialSolution);
+			Console.WriteLine(solution);
+			Console.WriteLine(solution.CalculateFitness());
 
-			//state.SaveToFile("/home/fiouch/res1.txt");
+			solution.SaveToFile("res.txt");
+
+			Console.ReadLine();
 		}
 	}
 }
