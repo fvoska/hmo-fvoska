@@ -8,6 +8,8 @@ namespace hmofvoska
 		// TODO: implement all constraint checks on the solution.
 		private Instance Instance;
 		private int[] VmsToServerAllocation;
+		private Dictionary<Tuple<int, int>, double> LinkUsage = new Dictionary<Tuple<int, int>, double>();
+		public Dictionary<Tuple<int, int>, bool> IgnoreLinks { get; private set; } = new Dictionary<Tuple<int, int>, bool>();
 		private Dictionary<Tuple<int, int>, List<int>> Routes = new Dictionary<Tuple<int, int>, List<int>>();
 
 		public State(Instance instance)
@@ -73,8 +75,51 @@ namespace hmofvoska
 				return false;
 			if (vms2 <= 0 || vms2 > Instance.numVms)
 				return false;
-			Routes.Add(new Tuple<int, int>(vms1, vms2), route);
-			return true;
+			if (route.Count > 1) {
+				// If components are not on same server, we have to check 
+			}
+			var vmsPair = new Tuple<int, int>(vms1, vms2);
+			bool wouldOverload = false;
+			var routeLinks = new List<Tuple<int, int>>();
+			for (int i = 0; i < route.Count - 1; i++) {
+				int node1 = route[i];
+				int node2 = route[i + 1];
+				var link = new Tuple<int, int>(node1, node2);
+				routeLinks.Add(link);
+
+				// Check if link would be over capacity.
+				if (LinkUsage.ContainsKey(link)) {
+					if (LinkUsage[link] + Instance.VmDemands[vmsPair] > Instance.Links[link].Capacity) {
+						// Adding this path would overload the link.
+						wouldOverload = true;
+						if (!IgnoreLinks.ContainsKey(link)) IgnoreLinks.Add(link, true);
+						break;
+					}
+				}
+			}
+			if (!wouldOverload) {
+				foreach (var link in routeLinks) {
+					// Increase link usage for all links that route uses.
+					if (!LinkUsage.ContainsKey(link)) {
+						LinkUsage.Add(link, Instance.VmDemands[vmsPair]);
+					} else {
+						LinkUsage[link] += Instance.VmDemands[vmsPair];
+					}
+				}
+				// Add route.
+				Routes.Add(new Tuple<int, int>(vms1, vms2), route);
+				return true;
+			} else {
+				return false;	
+			}
+		}
+
+		public string PrintLinkUsage() {
+			string s = "";
+			foreach (var link in LinkUsage) {
+				s += string.Format("Link <{0},{1}> used {2}/{3}\n", link.Key.Item1, link.Key.Item2, link.Value, Instance.Links[link.Key].Capacity);
+			}
+			return s;
 		}
 
 		public override string ToString()
@@ -219,7 +264,7 @@ namespace hmofvoska
 					if (srvCpuUsage > Instance.AvailableCPU(s)) {
 						// Components use more CPU than the server has available.
 						// Invalid solution.
-						Console.WriteLine("Server {0} does not have enough CPU ({1}/{2})", s, srvCpuUsage, Instance.AvailableCPU(s));
+						// Console.WriteLine("Server {0} does not have enough CPU ({1}/{2})", s, srvCpuUsage, Instance.AvailableCPU(s));
 						return double.NaN;
 					}
 
@@ -228,14 +273,14 @@ namespace hmofvoska
 			}
 			for (int n = 1; n <= Instance.numNodes; n++) {
 				if (BNodeActive(n)) {
-					Console.WriteLine("Node {0} active ({1})", n, Instance.PwrNode(n));
+					// Console.WriteLine("Node {0} active ({1})", n, Instance.PwrNode(n));
 				}
 				nodeCosts += NodeActive(n) * Instance.PwrNode(n);
 			}
 			var usedLinks = UsedLinks();
 			foreach (var link in Instance.Links) {
 				if (usedLinks.Contains(link.Key)) {
-					Console.WriteLine("Link <{0},{1}> used ({2})", link.Key.Item1, link.Key.Item2, link.Value.Power);
+					// Console.WriteLine("Link <{0},{1}> used ({2})", link.Key.Item1, link.Key.Item2, link.Value.Power);
 					linkCosts += link.Value.Power;
 				}
 			}

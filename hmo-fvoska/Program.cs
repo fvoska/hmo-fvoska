@@ -28,7 +28,7 @@ namespace hmofvoska
 			router.Route();
 
 			Console.WriteLine(solution);
-			Console.WriteLine(solution.CalculateFitness());
+			Console.WriteLine("\nFitness: " + solution.CalculateFitness());
 
 			solution.SaveToFile("res.txt");
 
