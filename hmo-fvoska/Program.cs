@@ -3,12 +3,9 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-namespace hmofvoska
-{
-	class MainClass
-	{
-		public static void Main (string[] args)
-		{
+namespace hmofvoska {
+	class MainClass {
+		public static void Main(string[] args) {
 			// First argument is path to instance file.
 			string instanceFile = "instanca.txt";
 			if (args.Length > 0) {
@@ -24,11 +21,13 @@ namespace hmofvoska
 			State solution = init.InitialPlacement();
 
 			// Set up intial routes.
-			Router router = new Router(instance, solution);
+			var router = new Router(instance, solution);
 			router.Route();
 
 			Console.WriteLine(solution);
-			Console.WriteLine("\nFitness: " + solution.CalculateFitness());
+			List<string> validityMessage;
+			Console.WriteLine("\nSolution valid: " + solution.IsValid(out validityMessage));
+			Console.WriteLine("Fitness: " + solution.CalculateFitness());
 
 			solution.SaveToFile("res.txt");
 

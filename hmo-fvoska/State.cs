@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace hmofvoska
-{
-	public class State : ICloneable
-	{
-		// TODO: implement all constraint checks on the solution.
+namespace hmofvoska {
+	public class State : ICloneable {
 		private Instance Instance;
 		private int[] VmsToServerAllocation;
 		private Dictionary<Tuple<int, int>, double> LinkUsage = new Dictionary<Tuple<int, int>, double>();
 		public Dictionary<Tuple<int, int>, bool> IgnoreLinks { get; private set; } = new Dictionary<Tuple<int, int>, bool>();
 		private Dictionary<Tuple<int, int>, List<int>> Routes = new Dictionary<Tuple<int, int>, List<int>>();
 
-		public State(Instance instance)
-		{
+		public State(Instance instance) {
 			Instance = instance;
 			VmsToServerAllocation = new int[Instance.numVms];
 		}
@@ -34,6 +30,54 @@ namespace hmofvoska
 			}
 			VmsToServerAllocation[vms - 1] = srv;
 			return true;
+		}
+
+		public bool SetRoute(int vms1, int vms2, List<int> route) {
+			// Sets up route between two components.
+			if (vms1 <= 0 || vms1 > Instance.numVms)
+				return false;
+			if (vms2 <= 0 || vms2 > Instance.numVms)
+				return false;
+
+			var vmsPair = new Tuple<int, int>(vms1, vms2);
+			bool wouldOverload = false;
+			var routeLinks = new List<Tuple<int, int>>();
+			for (int i = 0; i < route.Count - 1; i++) {
+				int node1 = route[i];
+				int node2 = route[i + 1];
+				var link = new Tuple<int, int>(node1, node2);
+				routeLinks.Add(link);
+
+				// Check if link would be over capacity.
+				if (LinkUsage.ContainsKey(link)) {
+					if (LinkUsage[link] + Instance.VmDemands[vmsPair] > Instance.Links[link].Capacity) {
+						// Adding this path would overload the link.
+						wouldOverload = true;
+						if (!IgnoreLinks.ContainsKey(link)) IgnoreLinks.Add(link, true);
+						break;
+					}
+				}
+			}
+			if (!wouldOverload) {
+				foreach (var link in routeLinks) {
+					// Increase link usage for all links that route uses.
+					if (!LinkUsage.ContainsKey(link)) {
+						LinkUsage.Add(link, Instance.VmDemands[vmsPair]);
+					} else {
+						LinkUsage[link] += Instance.VmDemands[vmsPair];
+					}
+				}
+				// Add route.
+				Routes.Add(new Tuple<int, int>(vms1, vms2), route);
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		public List<State> GenerateNeighbours() {
+			var neighbours = new List<State>();
+			return neighbours;
 		}
 
 		public int ComponentLocationServer(int component) {
@@ -69,51 +113,6 @@ namespace hmofvoska
 			return usage;
 		}
 
-		public bool SetRoute(int vms1, int vms2, List<int> route) {
-			// Sets up route between two components.
-			if (vms1 <= 0 || vms1 > Instance.numVms)
-				return false;
-			if (vms2 <= 0 || vms2 > Instance.numVms)
-				return false;
-			if (route.Count > 1) {
-				// If components are not on same server, we have to check 
-			}
-			var vmsPair = new Tuple<int, int>(vms1, vms2);
-			bool wouldOverload = false;
-			var routeLinks = new List<Tuple<int, int>>();
-			for (int i = 0; i < route.Count - 1; i++) {
-				int node1 = route[i];
-				int node2 = route[i + 1];
-				var link = new Tuple<int, int>(node1, node2);
-				routeLinks.Add(link);
-
-				// Check if link would be over capacity.
-				if (LinkUsage.ContainsKey(link)) {
-					if (LinkUsage[link] + Instance.VmDemands[vmsPair] > Instance.Links[link].Capacity) {
-						// Adding this path would overload the link.
-						wouldOverload = true;
-						if (!IgnoreLinks.ContainsKey(link)) IgnoreLinks.Add(link, true);
-						break;
-					}
-				}
-			}
-			if (!wouldOverload) {
-				foreach (var link in routeLinks) {
-					// Increase link usage for all links that route uses.
-					if (!LinkUsage.ContainsKey(link)) {
-						LinkUsage.Add(link, Instance.VmDemands[vmsPair]);
-					} else {
-						LinkUsage[link] += Instance.VmDemands[vmsPair];
-					}
-				}
-				// Add route.
-				Routes.Add(new Tuple<int, int>(vms1, vms2), route);
-				return true;
-			} else {
-				return false;	
-			}
-		}
-
 		public string PrintLinkUsage() {
 			string s = "";
 			foreach (var link in LinkUsage) {
@@ -122,8 +121,7 @@ namespace hmofvoska
 			return s;
 		}
 
-		public override string ToString()
-		{
+		public override string ToString() {
 			// Prints solution.
 			string s = "";
 			s += PrintX();
@@ -194,7 +192,7 @@ namespace hmofvoska
 
 		public bool BNodeActive(int node) {
 			// Node is active if there is communication with anohter node.
-			foreach(var usedLink in UsedLinks()) {
+			foreach (var usedLink in UsedLinks()) {
 				if (usedLink.Item1 == node || usedLink.Item2 == node) {
 					return true;
 				}
@@ -204,7 +202,7 @@ namespace hmofvoska
 
 		public int NodeActive(int node) {
 			// Node is active if there is communication with anohter node.
-			foreach(var usedLink in UsedLinks()) {
+			foreach (var usedLink in UsedLinks()) {
 				if (usedLink.Item1 == node || usedLink.Item2 == node) {
 					return 1;
 				}
@@ -236,10 +234,78 @@ namespace hmofvoska
 				}
 				for (var i = 0; i < route.Count - 1; i++) {
 					// Check all links along the route and add to used links.
-					usedLinks.Add(new Tuple<int, int>(route[i], route[i+1]));
+					usedLinks.Add(new Tuple<int, int>(route[i], route[i + 1]));
 				}
 			}
 			return usedLinks;
+		}
+
+		public bool IsValid(out List<string> details) {
+			bool isValid = true;
+			details = new List<string>();
+
+			// All components that are in at least one service chain should be placed on servers.
+			foreach (var component in Instance.ComponentsToPlace()) {
+				if (ComponentLocationServer(component) == 0) {
+					details.Add(string.Format("! Component {0} is not placed on a server !", component));
+					isValid = false;
+				}
+			}
+
+			// There should be a route between all components that communicate in at least one service chain.
+			foreach (var componentPair in Instance.AllNeededRoutes()) {
+				if (!Routes.ContainsKey(componentPair.Key)) {
+					details.Add(string.Format("! No route between components {0} and {1} !", componentPair.Key.Item1, componentPair.Key.Item2));
+					isValid = false;
+				}
+			}
+
+			// Server resources constraint check.
+			for (int server = 1; server <= Instance.numServers; server++) {
+				if (ServerUsageCPU(server) > Instance.AvailableCPU(server)) {
+					details.Add(string.Format("! Server {0} CPU overloaded {1}/{2} !", server, ServerUsageCPU(server), Instance.AvailableCPU(server)));
+					isValid = false;
+				}
+				if (ServerUsageRAM(server) > Instance.AvailableRAM(server)) {
+					details.Add(string.Format("! Server {0} RAM overloaded {1}/{2} !", server, ServerUsageRAM(server), Instance.AvailableRAM(server)));
+					isValid = false;
+				}
+			}
+
+			// Service chain latency constraint check.
+			foreach (var serviceChain in Instance.ServiceChains()) {
+				if (serviceChain.Value.Components.Count == 1) {
+					// If service chain has only one component, latency == 0.
+					continue;
+				}
+
+				// If service chain has multiple components, check latency for all communication.
+				double latency = 0;
+				for (int scIndex = 0; scIndex < serviceChain.Value.Components.Count - 1; scIndex++) {
+					var componentPair = new Tuple<int, int>(serviceChain.Value.Components[scIndex], serviceChain.Value.Components[scIndex + 1]);
+					if (!Routes.ContainsKey(componentPair)) {
+						details.Add(string.Format("! No route between components {0} and {1} !", componentPair.Item1, componentPair.Item2));
+						isValid = false;
+					} else {
+						var route = Routes[componentPair];
+						if (route.Count == 1) {
+							// Components are on same server, latency == 0.
+							continue;
+						}
+						for (var nodeIndex = 0; nodeIndex < route.Count - 1; nodeIndex++) {
+							var nodePair = new Tuple<int, int>(route[nodeIndex], route[nodeIndex + 1]);
+							latency += Instance.Links[nodePair].Latency;
+						}
+					}
+				}
+				if (latency > Instance.lat[serviceChain.Key - 1]) {
+					details.Add(string.Format("! Latency for service chain {0} is too high: {1}, max {2} !", serviceChain.Key, latency, Instance.lat[serviceChain.Key]));
+					isValid = false;
+				}
+			}
+
+			// Link capacity constraint is assured implicitly when setting up routes - route will not be created if creation of that route would overload link capacity
+			return isValid;
 		}
 
 		public double CalculateFitness() {
@@ -293,4 +359,3 @@ namespace hmofvoska
 		}
 	}
 }
-

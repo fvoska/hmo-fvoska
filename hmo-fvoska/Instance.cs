@@ -5,8 +5,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-namespace hmofvoska
-{
+namespace hmofvoska {
 	public class LinkProperties {
 		public double Capacity;
 		public double Power;
@@ -18,8 +17,7 @@ namespace hmofvoska
 			Latency = l;
 		}
 
-		public override string ToString()
-		{
+		public override string ToString() {
 			return "c=" + Capacity + "; p=" + Power + "; l=" + Latency;
 		}
 	}
@@ -36,8 +34,7 @@ namespace hmofvoska
 		}
 	}
 
-	public class Instance
-	{
+	public class Instance {
 		private string InstanceFile;
 		public int numServers { get; private set; }
 		public int numVms { get; private set; }
@@ -104,8 +101,7 @@ namespace hmofvoska
 		public Dictionary<Tuple<int, int>, double> VmDemands { get; private set; }
 		public double[] lat { get; private set; }
 
-		public Instance (string instanceFile)
-		{
+		public Instance(string instanceFile) {
 			Links = new Dictionary<Tuple<int, int>, LinkProperties>();
 			VmDemands = new Dictionary<Tuple<int, int>, double>();
 			InstanceFile = instanceFile;
@@ -231,7 +227,7 @@ namespace hmofvoska
 					al[i, j] = Convert.ToInt32(split[j]);
 				}
 			}
-				
+
 			// Parse server locations on nodes.
 			MatchCollection linksMatches = Regex.Matches(neatText, @"Edges\s*=\s*{\s*(<.*>,*\s*)*};");
 			for (int i = 0; i < linksMatches[0].Groups[1].Captures.Count; i++) {
@@ -264,8 +260,7 @@ namespace hmofvoska
 			foreach (var value in latMatches[0].Groups[1].Value.Split(',')) {
 				try {
 					lat[counter] = Convert.ToDouble(value.Trim(), provider);
-				}
-				catch (Exception ex) {
+				} catch (Exception ex) {
 					Console.WriteLine(ex.Message);
 				}
 				counter++;
@@ -358,11 +353,9 @@ namespace hmofvoska
 			s += "which components are in which service chains = \n";
 			int scRowLength = sc.GetLength(0);
 			int scColLength = sc.GetLength(1);
-			for (int i = 0; i < scRowLength; i++)
-			{
+			for (int i = 0; i < scRowLength; i++) {
 				s += '\t';
-				for (int j = 0; j < scColLength; j++)
-				{
+				for (int j = 0; j < scColLength; j++) {
 					s += sc[i, j] + " ";
 				}
 				s += '\n';
@@ -370,11 +363,9 @@ namespace hmofvoska
 			s += "resource requirements for each component = \n";
 			int reqRowLength = req.GetLength(0);
 			int reqColLength = req.GetLength(1);
-			for (int i = 0; i < reqRowLength; i++)
-			{
+			for (int i = 0; i < reqRowLength; i++) {
 				s += '\t';
-				for (int j = 0; j < reqColLength; j++)
-				{
+				for (int j = 0; j < reqColLength; j++) {
 					s += req[i, j] + " ";
 				}
 				s += '\n';
@@ -382,11 +373,9 @@ namespace hmofvoska
 			s += "resource availability = \n";
 			int avRowLength = av.GetLength(0);
 			int avColLength = av.GetLength(1);
-			for (int i = 0; i < avRowLength; i++)
-			{
+			for (int i = 0; i < avRowLength; i++) {
 				s += '\t';
-				for (int j = 0; j < avColLength; j++)
-				{
+				for (int j = 0; j < avColLength; j++) {
 					s += av[i, j] + " ";
 				}
 				s += '\n';
@@ -394,11 +383,9 @@ namespace hmofvoska
 			s += "server locations on nodes = \n";
 			int alRowLength = al.GetLength(0);
 			int alColLength = al.GetLength(1);
-			for (int i = 0; i < alRowLength; i++)
-			{
+			for (int i = 0; i < alRowLength; i++) {
 				s += '\t';
-				for (int j = 0; j < alColLength; j++)
-				{
+				for (int j = 0; j < alColLength; j++) {
 					s += al[i, j] + " ";
 				}
 				s += '\n';
@@ -425,4 +412,3 @@ namespace hmofvoska
 		}
 	}
 }
-

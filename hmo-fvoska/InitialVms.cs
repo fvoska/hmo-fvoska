@@ -1,14 +1,11 @@
 ﻿using System;
 
-namespace hmofvoska
-{
-	public class InitialVms
-	{
+namespace hmofvoska {
+	public class InitialVms {
 		private Instance Instance;
 		private State State;
 
-		public InitialVms(Instance instance)
-		{
+		public InitialVms(Instance instance) {
 			Instance = instance;
 			State = new State(Instance);
 		}
@@ -17,7 +14,7 @@ namespace hmofvoska
 			// Fill most efficient servers first.
 			var servers = Instance.OrderServersByEfficency();
 			int serverIndex = 0;
-			foreach(var component in Instance.ComponentsToPlace()) {
+			foreach (var component in Instance.ComponentsToPlace()) {
 				bool canPutVmsOnServer = true;
 				do {
 					canPutVmsOnServer = State.PutVmsOnServer(component, servers[serverIndex].Item1);
@@ -29,7 +26,7 @@ namespace hmofvoska
 						}
 					}
 					// Loop repeats until we find a server which has enough CPU and RAM for this Vms.
-				} while(!canPutVmsOnServer);
+				} while (!canPutVmsOnServer);
 			}
 			return State;
 		}

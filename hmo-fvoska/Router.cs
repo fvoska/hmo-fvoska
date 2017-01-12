@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using QuickGraph;
 using QuickGraph.Algorithms;
 
-namespace hmofvoska
-{
-	public class Router
-	{
+namespace hmofvoska {
+	public class Router {
 		private Instance Instance;
 		private State State;
 
@@ -46,8 +44,7 @@ namespace hmofvoska
 			}
 		}
 
-		public Router(Instance instance, State state)
-		{
+		public Router(Instance instance, State state) {
 			Instance = instance;
 			State = state;
 		}
