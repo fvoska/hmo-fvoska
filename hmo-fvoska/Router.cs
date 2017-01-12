@@ -21,7 +21,11 @@ namespace hmofvoska {
 				if (State.IgnoreLinks.ContainsKey(link.Key) && State.IgnoreLinks[link.Key] == true) {
 					// Console.WriteLine("Ignoring link <{0},{1}>", link.Key.Item1, link.Key.Item2);
 				} else {
-					AddEdgeWithCosts(link.Key.Item1, link.Key.Item2, link.Value.Latency);
+					double linkCost = link.Value.Latency;
+					if (State.LinkUsage.ContainsKey(link.Key)) {
+						// linkCost = (link.Value.Capacity - State.LinkUsage[link.Key]) / link.Value.Latency;
+					}
+					AddEdgeWithCosts(link.Key.Item1, link.Key.Item2, linkCost);
 				}
 			}
 		}
@@ -49,7 +53,9 @@ namespace hmofvoska {
 			State = state;
 		}
 
-		public void Route() {
+		int maxPathTrys = 10;
+
+		public bool Route() {
 			// Loop through all pairs of components which communicate in all service chains.
 			foreach (var componentPair in Instance.AllNeededRoutes()) {
 				// Console.WriteLine("Component {0} is on server {1} on node {2}", componentPair.Key.Item1, State.ComponentLocationServer(componentPair.Key.Item1), State.ComponentLocationNode(componentPair.Key.Item1));
@@ -64,11 +70,19 @@ namespace hmofvoska {
 
 				// If components are not on same node, find shortest path.
 				bool foundPath = false;
+				int pathTry = 0;
 				do {
+					pathTry++;
+					if (pathTry > maxPathTrys)
+						return false;
 					SetUpEdgesAndCosts();
 					var dijkstra = ShortestPath(c1l, c2l);
 					var path = new List<int>();
 					bool first = true;
+					if (dijkstra == null) {
+						// Couldn't find path.
+						return false;
+					}
 					foreach (var d in dijkstra) {
 						if (first) {
 							path.Add(d.Source);
@@ -83,6 +97,7 @@ namespace hmofvoska {
 				}
 				while (!foundPath);
 			}
+			return true;
 		}
 	}
 }

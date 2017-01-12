@@ -10,9 +10,9 @@ namespace hmofvoska {
 			State = new State(Instance);
 		}
 
-		public State InitialPlacement() {
+		public State InitialPlacement(bool sort = true) {
 			// Fill most efficient servers first.
-			var servers = Instance.OrderServersByEfficency();
+			var servers = Instance.OrderServersByEfficency(sort);
 			int serverIndex = 0;
 			foreach (var component in Instance.ComponentsToPlace()) {
 				bool canPutVmsOnServer = true;

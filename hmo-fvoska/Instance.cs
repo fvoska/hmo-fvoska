@@ -261,7 +261,7 @@ namespace hmofvoska {
 				try {
 					lat[counter] = Convert.ToDouble(value.Trim(), provider);
 				} catch (Exception ex) {
-					Console.WriteLine(ex.Message);
+					// Console.WriteLine(ex.Message);
 				}
 				counter++;
 			}

@@ -2,34 +2,50 @@
 using System.Collections.Generic;
 
 namespace hmofvoska {
-	public class State : ICloneable {
+	public class State {
 		private Instance Instance;
 		private int[] VmsToServerAllocation;
-		private Dictionary<Tuple<int, int>, double> LinkUsage = new Dictionary<Tuple<int, int>, double>();
-		public Dictionary<Tuple<int, int>, bool> IgnoreLinks { get; private set; } = new Dictionary<Tuple<int, int>, bool>();
-		private Dictionary<Tuple<int, int>, List<int>> Routes = new Dictionary<Tuple<int, int>, List<int>>();
+		public Dictionary<Tuple<int, int>, double> LinkUsage = new Dictionary<Tuple<int, int>, double>();
+		public Dictionary<Tuple<int, int>, bool> IgnoreLinks = new Dictionary<Tuple<int, int>, bool>();
+		public Dictionary<Tuple<int, int>, List<int>> Routes = new Dictionary<Tuple<int, int>, List<int>>();
+		public double Probability;
+		public double Fitness;
+		public int SwappedComponent;
 
 		public State(Instance instance) {
 			Instance = instance;
 			VmsToServerAllocation = new int[Instance.numVms];
 		}
 
-		public bool PutVmsOnServer(int vms, int srv) {
+		public bool PutVmsOnServer(int vms, int srv, bool ignoreConstraint = false) {
 			// Puts specified component on specified server.
 			if (vms <= 0 || vms > Instance.numVms)
 				return false;
 			if (srv <= 0 || srv > Instance.numServers)
 				return false;
-			if (Instance.RequiredCPU(vms) + ServerUsageCPU(srv) > Instance.AvailableCPU(srv)) {
+			if (!ignoreConstraint && Instance.RequiredCPU(vms) + ServerUsageCPU(srv) > Instance.AvailableCPU(srv)) {
 				// Putting Vms on this server would overload its CPU.
 				return false;
 			}
-			if (Instance.RequiredRAM(vms) + ServerUsageRAM(srv) > Instance.AvailableRAM(srv)) {
+			if (!ignoreConstraint && Instance.RequiredRAM(vms) + ServerUsageRAM(srv) > Instance.AvailableRAM(srv)) {
 				// Putting Vms on this server would overload its RAM.
 				return false;
 			}
 			VmsToServerAllocation[vms - 1] = srv;
 			return true;
+		}
+
+		public bool RemoveVmsFromServer(int vms, int srv) {
+			// Removes specified component from specified server.
+			if (vms <= 0 || vms > Instance.numVms)
+				return false;
+			if (srv <= 0 || srv > Instance.numServers)
+				return false;
+			if (VmsToServerAllocation[vms - 1] == srv) {
+				VmsToServerAllocation[vms - 1] = 0;
+				return true;
+			}
+			return false;
 		}
 
 		public bool SetRoute(int vms1, int vms2, List<int> route) {
@@ -68,15 +84,55 @@ namespace hmofvoska {
 					}
 				}
 				// Add route.
-				Routes.Add(new Tuple<int, int>(vms1, vms2), route);
+				if (!Routes.ContainsKey(vmsPair)) {
+					Routes.Add(vmsPair, route);
+				}
 				return true;
 			} else {
 				return false;
 			}
 		}
 
+		public List<int> OtherServers(int exclude) {
+			var otherServers = new List<int>();
+			for (int s = 1; s <= Instance.numServers; s++) {
+				if (s != exclude) {
+					otherServers.Add(s);
+				}
+			}
+			return otherServers;
+		}
+
+		public int RandomOtherServer(int exclude) {
+			var rnd = new Random();
+			int srv = exclude;
+			do {
+				srv = rnd.Next(1, Instance.numServers + 1);
+			}
+			while (srv == exclude);
+			return srv;
+		}
+
 		public List<State> GenerateNeighbours() {
+			// Neighbours have one component on a different server. Ignoring components that aren't in any server.
+			// Number of neighbours == (total number of components - number of ignored components) * (number of servers - 1)
+			// Number of neighbours == (44 - 2) * (28 - 1) = 1134
 			var neighbours = new List<State>();
+			foreach (var component in Instance.ComponentsToPlace()) {
+				var currentServer = ComponentLocationServer(component);
+				var otherServers = OtherServers(currentServer);
+				foreach (var otherServer in otherServers) {
+					var neighbour = this.Copy();
+					// Clean neighbour's routes
+					neighbour.LinkUsage.Clear();
+					neighbour.IgnoreLinks.Clear();
+					neighbour.Routes.Clear();
+					neighbour.SwappedComponent = component;
+					neighbour.RemoveVmsFromServer(component, currentServer);
+					neighbour.PutVmsOnServer(component, otherServer, true);
+					neighbours.Add(neighbour);
+				}
+			}
 			return neighbours;
 		}
 
@@ -350,12 +406,8 @@ namespace hmofvoska {
 					linkCosts += link.Value.Power;
 				}
 			}
-			return serverCosts + nodeCosts + linkCosts;
-		}
-
-		public object Clone()
-		{
-			return this.MemberwiseClone();
+			Fitness = serverCosts + nodeCosts + linkCosts;
+			return Fitness;
 		}
 	}
 }
