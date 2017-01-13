@@ -19,13 +19,13 @@ namespace hmofvoska {
 				instanceFile = args[0];
 			}
 
-			double minTemp = 1e-8; // TRY WITH: 1e-8 Limits algorithm running time.
+			double minTemp = 1e-8; // Limits algorithm running time.
 			int maxIterations = 10000; // Not really important, but this is another way to limit how long algorithm runs.
-			double initTemp = 5; // TRY WITH: 5
+			double initTemp = 5;
 			double temp = initTemp;
-			double alpha = 0.9; // TRY WITH: 0.99
-			int tabooListLength = 10; // TRY WITH: 10
-			bool sortServers = false; // TRY WITH: false
+			double alpha = 0.99;
+			int tabooListLength = 10;
+			bool sortServers = true;
 
 			// Parse instance file.
 			var instance = new Instance(instanceFile);
@@ -50,8 +50,7 @@ namespace hmofvoska {
 			Console.WriteLine("\tFitness: " + initFitness);
 			var t3 = DateTime.Now;
 			Console.WriteLine("\t\t\t\t\t\t\t\tCalculating initial solution took {0}s", (t3 - t2).TotalSeconds);
-			initSolution.SaveToFile("res-initial.txt");
-			initSolution.SaveToFile("res-" + initFitness + ".txt");
+			initSolution.SaveToFile("res-initial-" + initFitness + ".txt");
 
 			double min = initFitness;
 			double lastFitness = initFitness;
@@ -86,21 +85,21 @@ namespace hmofvoska {
 						foundRoute = router.Route();
 					} catch (Exception ex) {
 						// Error finding route - skipping neighbour.
-						Console.WriteLine(ex.Message);
+						// Console.WriteLine(ex.Message);
 						Console.WriteLine("!!! Error finding route - skipping neighbour !!!");
 						//stuck = true; break;
 						continue;
 					}
 					if (!foundRoute) {
 						doomsdayCounter++;
-						if (doomsdayCounter == neighbours.Count) {
+						if (doomsdayCounter >= neighbours.Count) {
 							// In case none of the neighbours have valid routes, go back to initial solution.
 							neighbourIndex = 0;
 							doomsdayCounter = 0;
 							totalDooms++;
 							currentSolution = initSolution;
 							neighbours = currentSolution.GenerateNeighbours();
-							temp = initTemp / Math.Pow(alpha, totalDooms);
+							temp = initTemp * Math.Pow(alpha, totalDooms);
 							Console.WriteLine("!!! None of the neighbours have valid routes, going back to initial solution !!!");
 							continue;
 						}

@@ -22,9 +22,6 @@ namespace hmofvoska {
 					// Console.WriteLine("Ignoring link <{0},{1}>", link.Key.Item1, link.Key.Item2);
 				} else {
 					double linkCost = link.Value.Latency;
-					if (State.LinkUsage.ContainsKey(link.Key)) {
-						// linkCost = (link.Value.Capacity - State.LinkUsage[link.Key]) / link.Value.Latency;
-					}
 					AddEdgeWithCosts(link.Key.Item1, link.Key.Item2, linkCost);
 				}
 			}

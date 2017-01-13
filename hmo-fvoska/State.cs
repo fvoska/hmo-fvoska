@@ -124,9 +124,9 @@ namespace hmofvoska {
 				foreach (var otherServer in otherServers) {
 					var neighbour = this.Copy();
 					// Clean neighbour's routes
-					neighbour.LinkUsage.Clear();
-					neighbour.IgnoreLinks.Clear();
-					neighbour.Routes.Clear();
+					neighbour.LinkUsage = new Dictionary<Tuple<int, int>, double>();
+					neighbour.IgnoreLinks = new Dictionary<Tuple<int, int>, bool>();
+					neighbour.Routes = new Dictionary<Tuple<int, int>, List<int>>();
 					neighbour.SwappedComponent = component;
 					neighbour.RemoveVmsFromServer(component, currentServer);
 					neighbour.PutVmsOnServer(component, otherServer, true);
